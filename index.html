@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>😂 Meme-tastic Retrospective Game - [Sprint Number/Date] 😂</title>
+  <style>
+    .memes-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .meme-card {
+      margin: 10px;
+      padding: 10px;
+      border: 2px solid #dddddd;
+      text-align: center;
+      max-width: 300px;
+      cursor: pointer;
+    }
+
+    .meme-card img {
+      max-width: 100%;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .gallery-view {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 300px);
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .gallery-item {
+      margin: 10px;
+      padding: 10px;
+      border: 2px solid #dddddd;
+      text-align: center;
+      max-width: 300px;
+      cursor: pointer;
+    }
+
+    .gallery-item img {
+      max-width: 100%;
+    }
+
+    .gallery-item div {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>😂 Meme-tastic Retrospective Game - [Sprint Number/Date] 😂</h1>
+    <div class="gallery-view">
+      <div class="gallery-item" v-for="(fetchedMeme, index) in fetchedMemes" :key="index">
+        <div class="image-container">
+          <img :src="fetchedMeme.link" :alt="fetchedMeme.name" />
+          <div>{{ fetchedMeme.name }}</div>
+          <div>{{ fetchedMeme.description }}</div>
+          <button @click="addFetchedMeme(fetchedMeme)">Add to Memes</button>
+        </div>
+      </div>
+    </div>
+    <div class="memes-container">
+      <meme-card v-for="(meme, index) in memes" :key="index" :meme="meme" @remove="removeMeme(index)"></meme-card>
+      <div class="meme-card" v-if="addingNewMeme">
+        <div class="edit-section">
+          <input type="text" v-model="newMemeLink" placeholder="Enter Meme Link" />
+          <textarea v-model="newMemeExplanation" placeholder="Explain why this meme relates to the retrospective"></textarea>
+          <input type="text" v-model="newMemeName" placeholder="Meme Name" />
+          <input type="text" v-model="newMemeDescription" placeholder="Meme Description" />
+          <button @click="addNewMeme">Add</button>
+        </div>
+        <button @click="toggleAddingNewMeme">Add New Meme</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script>
+    Vue.component('meme-card', {
+      props: ['meme'],
+      data() {
+        return {
+          isHidden: true,
+          isEditing: false,
+          editedMemeLink: this.meme.link,
+          editedMemeExplanation: this.meme.explanation,
+        };
+      },
+      methods: {
+        revealMeme() {
+          this.isHidden = !this.isHidden;
+        },
+        editMeme() {
+          this.isEditing = true;
+        },
+        saveMeme() {
+          this.meme.link = this.editedMemeLink;
+          this.meme.explanation = this.editedMemeExplanation;
+          this.isEditing = false;
+          this.isHidden = false;
+        },
+        removeMeme() {
+          this.$emit('remove');
+        },
+      },
+      template: `
+        <div class="meme-card" @click="revealMeme">
+          <img :src="meme.link" :alt="meme.name" />
+          <div v-if="!isEditing" class="meme-meaning" :class="{ hidden: isHidden }">{{ meme.explanation }}</div>
+          <div v-if="isEditing" class="edit-section">
+            <input type="text" v-model="editedMemeLink" />
+            <textarea v-model="editedMemeExplanation"></textarea>
+            <button @click="saveMeme">Save</button>
+          </div>
+          <button v-if="!isEditing" @click="editMeme">Edit</button>
+          <button v-if="!isEditing" @click="removeMeme">Remove</button>
+        </div>
+      `,
+    });
+
+    new Vue({
+      el: '#app',
+      data: {
+        memes: [],
+        addingNewMeme: false,
+        newMemeLink: '',
+        newMemeExplanation: '',
+        newMemeName: '',
+        newMemeDescription: '',
+        fetchedMemes: [],
+      },
+      methods: {
+        toggleAddingNewMeme() {
+          this.addingNewMeme = !this.addingNewMeme;
+        },
+        addNewMeme() {
+          if (this.newMemeLink && this.newMemeExplanation && this.newMemeName && this.newMemeDescription) {
+            this.memes.push({
+              link: this.newMemeLink,
+              alt: this.newMemeName,
+              explanation: this.newMemeExplanation,
+              name: this.newMemeName,
+              description: this.newMemeDescription,
+            });
+            this.newMemeLink = '';
+            this.newMemeExplanation = '';
+            this.newMemeName = '';
+            this.newMemeDescription = '';
+            this.addingNewMeme = false;
+          }
+        },
+        fetchMemes() {
+          fetch('https://api.imgflip.com/get_memes')
+            .then(response => response.json())
+            .then(data => {
+              this.fetchedMemes = data.data.memes.map(meme => ({
+                link: meme.url,
+                alt: meme.name,
+                explanation: 'Insert Meaning of Searched Meme',
+                name: meme.name,
+                description: 'Description of Searched Meme',
+              }));
+            })
+            .catch(error => console.error('Error fetching memes:', error));
+        },
+        addFetchedMeme(fetchedMeme) {
+          this.memes.push(fetchedMeme);
+          this.fetchedMemes = this.fetchedMemes.filter(meme => meme !== fetchedMeme);
+        },
+        removeMeme(index) {
+          this.memes.splice(index, 1);
+        },
+      },
+      mounted() {
+        this.fetchMemes(); // Fetch memes after page load
+      },
+    });
+  </script>
+</body>
+</html>
